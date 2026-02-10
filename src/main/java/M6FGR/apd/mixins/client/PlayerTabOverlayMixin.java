@@ -5,7 +5,7 @@ import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.PlayerTabOverlay;
 import net.minecraft.client.multiplayer.PlayerInfo;
-import net.minecraftforge.fml.loading.LoadingModList;
+import net.minecraftforge.fml.ModList;
 import org.spongepowered.asm.mixin.*;
 import org.spongepowered.asm.mixin.injection.*;
 
@@ -14,25 +14,17 @@ public class PlayerTabOverlayMixin {
     @Unique
     private static int PLAYER_SLOT_EXTRA_WIDTH;
     @Unique
-    private final boolean ap$isEmbeddiumPresent = LoadingModList.get()
-            .getMods().stream()
-            .anyMatch(mod -> mod.getModId().equals("embeddium"));
-    @Redirect(
-            method = "render",
-            at =
-            @At(
-                    value = "INVOKE",
-                    target =
-                            "Lnet/minecraft/client/gui/components/PlayerTabOverlay;renderPingIcon(Lnet/minecraft/client/gui/GuiGraphics;IIILnet/minecraft/client/multiplayer/PlayerInfo;)V"))
+    @Redirect(method = "render", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/components/PlayerTabOverlay;renderPingIcon(Lnet/minecraft/client/gui/GuiGraphics;IIILnet/minecraft/client/multiplayer/PlayerInfo;)V"))
     protected void renderPingIcon(PlayerTabOverlay instance, GuiGraphics guiGraphics, int width, int x, int y, PlayerInfo playerInfo) {
-        int ping = -1;
+        boolean ap$isEmbeddiumPresent = ModList.get().isLoaded("embeddium");
+        int ping;
         if (ap$isEmbeddiumPresent) {
-            if (playerInfo.getProfile().getId().equals(Minecraft.getInstance().player.getUUID())) {
-                ping = (int) (Minecraft.getInstance().getConnection().getConnection().getAverageSentPackets());
-            }
+            // permanent embeddium compatibility
+            ping = (int) (Minecraft.getInstance().getConnection().getConnection().getAverageSentPackets());
         } else {
             ping = playerInfo.getLatency();
         }
+
         if (Minecraft.getInstance().isSingleplayer()) return;
         Font font = Minecraft.getInstance().font;
         String sPing;

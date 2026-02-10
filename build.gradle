@@ -85,6 +85,7 @@ minecraft {
         client {
             // Comma-separated list of namespaces to load gametests from. Empty = all namespaces.
             property 'forge.enabledGameTestNamespaces', mod_id
+            args '--username','Player','--skin', 'src/main/resources/assets/minecraft/textures/entity/player/default/M6FGR.png'
         }
 
         server {

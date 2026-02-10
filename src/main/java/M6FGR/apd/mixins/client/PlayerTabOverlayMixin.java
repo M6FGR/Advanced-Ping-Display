@@ -5,6 +5,7 @@ import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.PlayerTabOverlay;
 import net.minecraft.client.multiplayer.PlayerInfo;
+import net.minecraftforge.fml.loading.LoadingModList;
 import org.spongepowered.asm.mixin.*;
 import org.spongepowered.asm.mixin.injection.*;
 
@@ -13,7 +14,7 @@ public class PlayerTabOverlayMixin {
     @Unique
     private static int PLAYER_SLOT_EXTRA_WIDTH;
     @Unique
-    private final boolean ap$isEmbeddiumPresent = net.minecraftforge.fml.loading.LoadingModList.get()
+    private final boolean ap$isEmbeddiumPresent = LoadingModList.get()
             .getMods().stream()
             .anyMatch(mod -> mod.getModId().equals("embeddium"));
     @Redirect(
@@ -25,7 +26,7 @@ public class PlayerTabOverlayMixin {
                             "Lnet/minecraft/client/gui/components/PlayerTabOverlay;renderPingIcon(Lnet/minecraft/client/gui/GuiGraphics;IIILnet/minecraft/client/multiplayer/PlayerInfo;)V"))
     protected void renderPingIcon(PlayerTabOverlay instance, GuiGraphics guiGraphics, int width, int x, int y, PlayerInfo playerInfo) {
         int ping = -1;
-        if (ap$isEmbeddiumPresent || Minecraft.getInstance().level.isClientSide) {
+        if (ap$isEmbeddiumPresent) {
             if (playerInfo.getProfile().getId().equals(Minecraft.getInstance().player.getUUID())) {
                 ping = (int) (Minecraft.getInstance().getConnection().getConnection().getAverageSentPackets());
             }

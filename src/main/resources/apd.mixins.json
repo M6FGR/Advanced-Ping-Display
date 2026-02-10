@@ -3,7 +3,7 @@
   "minVersion": "0.8",
   "package": "M6FGR.apd.mixins",
   "compatibilityLevel": "JAVA_17",
-  "refmap": "advancedpinger.refmap.json",
+  "refmap": "apd.refmap.json",
   "mixins": [
     "server.ServerGamePacketListenerImplAccessor",
     "server.ServerGamePacketListenerImplMixin"

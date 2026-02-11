@@ -1,23 +1,21 @@
 package M6FGR.apd.mixins.client;
 
 import M6FGR.apd.main.AdvancedPingDisplay;
+import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.PlayerTabOverlay;
 import net.minecraft.client.multiplayer.PlayerInfo;
-import net.minecraftforge.fml.ModList;
-import net.minecraftforge.fml.loading.LoadingModList;
 import org.spongepowered.asm.mixin.*;
 import org.spongepowered.asm.mixin.injection.*;
 
 @Mixin(PlayerTabOverlay.class)
 public class PlayerTabOverlayMixin {
+    @Shadow @Final private Minecraft minecraft;
     @Unique
     private static int PLAYER_SLOT_EXTRA_WIDTH;
-    @Unique
-    @Redirect(method = "render", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/components/PlayerTabOverlay;renderPingIcon(Lnet/minecraft/client/gui/GuiGraphics;IIILnet/minecraft/client/multiplayer/PlayerInfo;)V"))
-    protected void renderPingIcon(PlayerTabOverlay instance, GuiGraphics guiGraphics, int width, int x, int y, PlayerInfo playerInfo) {
+    @Redirect(method = "render", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/components/PlayerTabOverlay;renderPingIcon(Lcom/mojang/blaze3d/vertex/PoseStack;IIILnet/minecraft/client/multiplayer/PlayerInfo;)V"))
+    protected void renderPingIcon(PlayerTabOverlay instance, PoseStack poseStack, int width, int x, int y, PlayerInfo playerInfo) {
         int ping = getPing(playerInfo, AdvancedPingDisplay.HAS_TARGET_MOD);
         if (Minecraft.getInstance().isSingleplayer()) return;
         Font font = Minecraft.getInstance().font;
@@ -45,10 +43,12 @@ public class PlayerTabOverlayMixin {
                 color = 0x1AFF1A;
             }
         }
-        guiGraphics.drawString(font, sPing, x + width - font.width(sPing), y, color, true);
+        float renderX = (float)(x + width - font.width(sPing));
+        float renderY = (float)y;
+        font.drawShadow(poseStack, sPing, renderX, renderY, color);
     }
 
-     private static int getPing(PlayerInfo playerInfo, boolean isEmbeddiumPresent) {
+    private static int getPing(PlayerInfo playerInfo, boolean isEmbeddiumPresent) {
         int ping;
         boolean isSelf = playerInfo.getProfile().getId().equals(Minecraft.getInstance().player.getGameProfile().getId());
         if (isEmbeddiumPresent && isSelf) {

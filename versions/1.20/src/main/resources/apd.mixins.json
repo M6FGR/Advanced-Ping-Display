@@ -6,7 +6,8 @@
   "refmap": "apd.refmap.json",
   "mixins": [
     "server.ServerGamePacketListenerImplAccessor",
-    "server.ServerGamePacketListenerImplMixin"
+    "server.ServerGamePacketListenerImplMixin",
+    "server.ServerPlayerMixin"
   ],
   "client": [
     "client.PlayerTabOverlayMixin"

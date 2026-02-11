@@ -8,8 +8,10 @@ pluginManagement {
     }
 }
 
-plugins {
-    id 'org.gradle.toolchains.foojay-resolver-convention' version '0.7.0'
-}
+include ':1.18', ':1.19', ':1.20'
+
+project(':1.18').projectDir = file('versions/1.18')
+project(':1.19').projectDir = file('versions/1.19')
+project(':1.20').projectDir = file('versions/1.20')
 
 rootProject.name = "Advanced Ping Display"

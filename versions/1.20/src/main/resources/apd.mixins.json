@@ -4,6 +4,7 @@
   "package": "M6FGR.apd.mixins",
   "compatibilityLevel": "JAVA_17",
   "refmap": "apd.refmap.json",
+  "plugin": "M6FGR.apd.mixins.plugin.AdvancedPingMixinPlugin",
   "mixins": [
     "server.ServerGamePacketListenerImplAccessor",
     "server.ServerGamePacketListenerImplMixin",

@@ -6,57 +6,63 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.components.PlayerTabOverlay;
 import net.minecraft.client.multiplayer.PlayerInfo;
-import org.spongepowered.asm.mixin.*;
-import org.spongepowered.asm.mixin.injection.*;
+import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Unique;
+import org.spongepowered.asm.mixin.injection.At;
+import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.Constant;
+import org.spongepowered.asm.mixin.injection.ModifyConstant;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 @Mixin(PlayerTabOverlay.class)
 public class PlayerTabOverlayMixin {
-    @Shadow @Final private Minecraft minecraft;
     @Unique
-    private static int PLAYER_SLOT_EXTRA_WIDTH;
-    @Redirect(method = "render", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/components/PlayerTabOverlay;renderPingIcon(Lcom/mojang/blaze3d/vertex/PoseStack;IIILnet/minecraft/client/multiplayer/PlayerInfo;)V"))
-    protected void renderPingIcon(PlayerTabOverlay instance, PoseStack poseStack, int width, int x, int y, PlayerInfo playerInfo) {
-        int ping = getPing(playerInfo, AdvancedPingDisplay.HAS_TARGET_MOD);
-        if (Minecraft.getInstance().isSingleplayer()) return;
+    private int apd$extraWidth;
+
+    @Inject(
+            method = "renderPingIcon",
+            at = @At("HEAD"),
+            cancellable = true
+    )
+    protected void onRenderPingIcon(PoseStack poseStack, int width, int x, int y, PlayerInfo playerInfo, CallbackInfo ci) {
+        if (Minecraft.getInstance().hasSingleplayerServer()) {
+            return;
+        }
+
+        ci.cancel();
+
+        int ping = apd$getPing(playerInfo, AdvancedPingDisplay.HAS_INCOMPATIBLE_MOD);
         Font font = Minecraft.getInstance().font;
         String sPing;
         int color;
+
         if (ping < 0) {
-            PLAYER_SLOT_EXTRA_WIDTH = 65;
+            this.apd$extraWidth = 65;
             sPing = ": Loading Ping...";
-            color = 0xB2B2B2;
+            color = 0xFFA0A0A0;
         } else {
             sPing = ping + "ms";
-            if (ping > 1000) {
-                PLAYER_SLOT_EXTRA_WIDTH = 15;
-                color = 0xFF1A1A;
-            } else if (ping > 500) {
-                color = 0x99CCCC;
-            } else if (ping > 300) {
-                color = 0x66E6E6;
-            } else if (ping > 100) {
-                color = 0x80CC1A;
-            } else if (ping > 50) {
-                color = 0x80FF4D;
-            } else {
-                PLAYER_SLOT_EXTRA_WIDTH = 25;
-                color = 0x1AFF1A;
-            }
+            this.apd$extraWidth = (ping > 999) ? 35 : 25;
+
+            float ratio = Math.min(ping / 1000.0F, 1.0F);
+            float curvedRatio = (float) Math.pow(ratio, 0.5);
+            int r = (int) (curvedRatio * 255);
+            int g = (int) ((1.0F - curvedRatio) * 255);
+            color = 0xFF000000 | (r << 16) | (g << 8);
         }
-        float renderX = (float)(x + width - font.width(sPing));
-        float renderY = (float)y;
-        font.drawShadow(poseStack, sPing, renderX, renderY, color);
+
+        font.drawShadow(poseStack, sPing, (float)(x + width - font.width(sPing)), (float)y, color);
     }
 
-    private static int getPing(PlayerInfo playerInfo, boolean isEmbeddiumPresent) {
-        int ping;
+    @Unique
+    private int apd$getPing(PlayerInfo playerInfo, boolean isIncompatibleModsPresent) {
+        if (Minecraft.getInstance().player == null) return playerInfo.getLatency();
+
         boolean isSelf = playerInfo.getProfile().getId().equals(Minecraft.getInstance().player.getGameProfile().getId());
-        if (isEmbeddiumPresent && isSelf) {
-            ping = (int) (Minecraft.getInstance().getConnection().getConnection().getAverageSentPackets());
-        } else {
-            ping = playerInfo.getLatency();
+        if (isIncompatibleModsPresent && isSelf) {
+            return (int) (Minecraft.getInstance().getConnection().getConnection().getAverageSentPackets());
         }
-        return ping;
+        return playerInfo.getLatency();
     }
 
     @ModifyConstant(
@@ -64,6 +70,6 @@ public class PlayerTabOverlayMixin {
             constant = @Constant(intValue = 13)
     )
     private int modifyTabWidth(int originalWidth) {
-        return originalWidth + PLAYER_SLOT_EXTRA_WIDTH;
+        return originalWidth + this.apd$extraWidth;
     }
 }

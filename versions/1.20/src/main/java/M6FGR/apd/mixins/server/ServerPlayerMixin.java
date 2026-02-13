@@ -20,9 +20,10 @@ import javax.annotation.Nullable;
 @Mixin(ServerPlayer.class)
 public abstract class ServerPlayerMixin {
 
-    @Shadow public int latency;
+    @Shadow
+    public int latency;
 
-    @Inject(method = "<init>", at = @At("RETURN"))
+    @Inject(method = "<init>", at = @At("TAIL"))
     private void ap$initLatency(CallbackInfo ci) {
         this.latency = -1;
     }

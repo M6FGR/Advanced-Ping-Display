@@ -1,5 +1,6 @@
 package M6FGR.apd.mixins.client;
 
+import M6FGR.apd.api.math.MathUtil;
 import M6FGR.apd.main.AdvancedPingDisplay;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
@@ -16,36 +17,40 @@ import org.spongepowered.asm.mixin.injection.*;
 public class PlayerTabOverlayMixin {
     @Unique
     private static int PLAYER_SLOT_EXTRA_WIDTH;
-    @Unique
-    @Redirect(method = "render", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/components/PlayerTabOverlay;renderPingIcon(Lnet/minecraft/client/gui/GuiGraphics;IIILnet/minecraft/client/multiplayer/PlayerInfo;)V"))
-    protected void renderPingIcon(PlayerTabOverlay instance, GuiGraphics guiGraphics, int width, int x, int y, PlayerInfo playerInfo) {
-        int ping = getPing(playerInfo, AdvancedPingDisplay.HAS_TARGET_MOD);
+    @Overwrite
+    protected void renderPingIcon(GuiGraphics guiGraphics, int width, int x, int y, PlayerInfo playerInfo) {
+        int ping = getPing(playerInfo, AdvancedPingDisplay.HAS_INCOMPATIBLE_MOD);
         if (Minecraft.getInstance().isSingleplayer()) return;
+
         Font font = Minecraft.getInstance().font;
         String sPing;
-        int color;
+        int color = 0;
+
         if (ping < 0) {
             PLAYER_SLOT_EXTRA_WIDTH = 65;
             sPing = ": Loading Ping...";
-            color = 0xB2B2B2;
+            color = MathUtil.toHex(0.5F, 0.5F, 0.5F);
+        } else if (ping > 200) {
+            sPing = ping + "ms!";
         } else {
             sPing = ping + "ms";
-            if (ping > 1000) {
-                PLAYER_SLOT_EXTRA_WIDTH = 15;
-                color = 0xFF1A1A;
-            } else if (ping > 500) {
-                color = 0x99CCCC;
-            } else if (ping > 300) {
-                color = 0x66E6E6;
-            } else if (ping > 100) {
-                color = 0x80CC1A;
-            } else if (ping > 50) {
-                color = 0x80FF4D;
-            } else {
-                PLAYER_SLOT_EXTRA_WIDTH = 25;
-                color = 0x1AFF1A;
+            PLAYER_SLOT_EXTRA_WIDTH = 25;
+
+            float ratio = Math.min(ping / 1000.0F, 1.0F);
+
+            float curvedRatio = (float) Math.pow(ratio, 0.5);
+
+            float r = curvedRatio;
+            float g = 1.0F - curvedRatio;
+            float b = 0.0F;
+
+            color = MathUtil.toHex(r, g, b);
+
+            if (ping > 999) {
+                PLAYER_SLOT_EXTRA_WIDTH = 35;
             }
         }
+
         guiGraphics.drawString(font, sPing, x + width - font.width(sPing), y, color, true);
     }
 

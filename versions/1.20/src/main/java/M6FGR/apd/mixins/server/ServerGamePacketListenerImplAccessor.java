@@ -22,11 +22,4 @@ public interface ServerGamePacketListenerImplAccessor {
     @Accessor("keepAliveTime")
     long getKeepAliveTime();
 
-
-    @Accessor("keepAliveChallenge")
-    void setKeepAliveChallenge(long challenge);
-
-
-    @Accessor("player")
-    ServerPlayer getPlayer();
 }

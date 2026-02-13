@@ -4,6 +4,7 @@ import M6FGR.apd.api.enums.PingType;
 import M6FGR.apd.config.APDConfig;
 import M6FGR.apd.main.AdvancedPingDisplay;
 import M6FGR.apd.network.server.DedicatedServerDetector;
+import com.electronwill.nightconfig.core.file.CommentedFileConfig;
 import com.mojang.serialization.Codec;
 import net.minecraft.client.OptionInstance;
 import net.minecraft.client.gui.GuiGraphics;
@@ -16,16 +17,20 @@ import net.minecraft.network.chat.CommonComponents;
 import net.minecraft.network.chat.Component;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
+import net.minecraftforge.fml.config.ConfigTracker;
+import net.minecraftforge.fml.config.IConfigEvent;
+import net.minecraftforge.fml.event.config.ModConfigEvent;
+import net.minecraftforge.fml.loading.FMLPaths;
 
 import java.util.List;
 
 @OnlyIn(Dist.CLIENT)
+@OnlyIn(Dist.CLIENT)
 public class APDConfigScreen extends Screen {
     private final Screen lastScreen;
     private OptionsList list;
-
     private OptionInstance<PingType> pingTypeOption;
-    private OptionInstance<Double> pingFreq;
+    private OptionInstance<Integer> pingFreq;
 
     public APDConfigScreen(Screen lastScreen) {
         super(Component.literal("Advanced Pinger Settings"));
@@ -34,78 +39,71 @@ public class APDConfigScreen extends Screen {
 
     @Override
     protected void init() {
-        this.pingFreq = new OptionInstance<>(
-                "options.ping_frequency",
-                OptionInstance.noTooltip(),
-                (label, value) -> {
-                    if (value == 0) {
-                        return Component.literal("Ping Frequency: Instant");
-                    }
-                    return Component.literal("Ping Frequency").append(": " + value + "s");
-                },
-                new OptionInstance.IntRange(0, 15).xmap(
-                        (int val) -> (double) val,
-                        (Double val) -> val.intValue()
-                ),
-                APDConfig.PING_FREQUENCY.get(),
-                (value) -> {
-                    APDConfig.PING_FREQUENCY.set(value);
-                    APDConfig.SPEC.save();
-                }
-        );
-
         this.pingTypeOption = new OptionInstance<>(
                 "Ping Type",
-                value -> OptionInstance.cachedConstantTooltip(Component.literal("Normal: Standard ping.\nPacket: Local packet count.")).apply(value),
-                (label, value) -> Component.literal("").append(value.getName()),
+                OptionInstance.noTooltip(),
+                (label, value) -> Component.literal(value.getName()),
                 new OptionInstance.Enum<>(
                         List.of(PingType.NORMAL, PingType.PACKET),
                         Codec.INT.xmap(i -> PingType.values()[i], PingType::ordinal)
                 ),
-                AdvancedPingDisplay.HAS_INCOMPATIBLE_MOD ? PingType.PACKET : APDConfig.PING_TYPE.get(),
-                (value) -> {
-                    if (!AdvancedPingDisplay.HAS_INCOMPATIBLE_MOD) {
-                        APDConfig.PING_TYPE.set(value);
-                        APDConfig.SPEC.save();
-                    }
-                }
+                APDConfig.PING_TYPE.get(),
+                (value) -> {}
+        );
+
+        this.pingFreq = new OptionInstance<>(
+                "Ping Frequency",
+                OptionInstance.noTooltip(),
+                (label, value) -> Component.literal("Ping Frequency: " +value + "s"),
+                new OptionInstance.IntRange(0, 15),
+                APDConfig.PING_FREQUENCY.get().intValue(),
+                (value) -> {}
         );
 
         this.list = new OptionsList(this.minecraft, this.width, this.height, 32, this.height - 32, 25);
         this.list.addSmall(this.pingFreq, this.pingTypeOption);
         this.addRenderableWidget(this.list);
 
-
         boolean isSingleplayer = this.minecraft.getSingleplayerServer() != null || this.minecraft.hasSingleplayerServer();
         boolean isIncompatible = AdvancedPingDisplay.HAS_INCOMPATIBLE_MOD;
-        boolean modOnServer = DedicatedServerDetector.isModOnServer();
 
         AbstractWidget typeBtn = this.list.findOption(this.pingTypeOption);
-        AbstractWidget freqBtn = this.list.findOption(this.pingFreq);
-
-        if (typeBtn != null) {
-            if (isSingleplayer || isIncompatible) {
-                typeBtn.active = false;
-                String reason = isSingleplayer ? "§cDisabled in Singleplayer" : "§cIncompatible Mods: " + String.join(", ", AdvancedPingDisplay.incompatibleMods);
-                typeBtn.setTooltip(Tooltip.create(Component.literal(reason)));
-            }
+        String modList = !AdvancedPingDisplay.incompatibleMods.isEmpty() ? String.join(", ", AdvancedPingDisplay.incompatibleMods.stream().iterator().next()) : "";
+        if (typeBtn != null && (isSingleplayer || isIncompatible)) {
+            typeBtn.active = false;
+            typeBtn.setTooltip(Tooltip.create(Component.literal(isSingleplayer ? "§Cannot change in Singleplayer" : "§cIncompatible Mods: " + modList)));
         }
-
-        if (freqBtn != null) {
-            if (isSingleplayer) {
-                freqBtn.active = false;
-                freqBtn.setTooltip(Tooltip.create(Component.literal("§cDisabled in Singleplayer")));
-            } else if (!modOnServer) {
-                freqBtn.active = false;
-                freqBtn.setTooltip(Tooltip.create(Component.literal("§cRequires mod on server to change frequency")));
-            }
-        }
-
-        // --- LOGIC UPDATES END HERE ---
-
         this.addRenderableWidget(Button.builder(CommonComponents.GUI_DONE, (button) -> {
+            this.onClose();
+            APDConfig.SPEC.save();
             this.minecraft.setScreen(this.lastScreen);
         }).bounds(this.width / 2 - 100, this.height - 27, 200, 20).build());
+    }
+
+    @Override
+    public void onClose() {
+        super.onClose();
+        ConfigTracker.INSTANCE.loadDefaultServerConfigs();
+    }
+
+    @Override
+    public void removed() {
+        if (this.pingTypeOption != null && this.pingFreq != null) {
+            PingType type = this.pingTypeOption.get();
+            double freq = this.pingFreq.get().doubleValue();
+
+            System.out.println("DEBUG: Attempting to save... Type: " + type + " Freq: " + freq);
+
+            APDConfig.PING_TYPE.set(type);
+            APDConfig.PING_FREQUENCY.set(freq);
+
+            if (APDConfig.SPEC.isLoaded()) {
+                APDConfig.SPEC.save();
+                System.out.println("DEBUG: File saved successfully.");
+            } else {
+                System.out.println("DEBUG: Could not save - Config is NOT loaded (Server Sync active?)");
+            }
+        }
     }
 
     @Override

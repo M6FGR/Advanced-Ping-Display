@@ -8,12 +8,14 @@ import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.RegisterCommandsEvent;
 import net.minecraftforge.eventbus.api.IEventBus;
+import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.DistExecutor;
 import net.minecraftforge.fml.IExtensionPoint;
 import net.minecraftforge.fml.ModList;
 import net.minecraftforge.fml.ModLoadingContext;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.config.ModConfig;
+import net.minecraftforge.fml.event.config.ModConfigEvent;
 import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 import net.minecraftforge.fml.loading.FMLLoader;
@@ -26,6 +28,10 @@ import java.util.List;
 
 @SuppressWarnings({"removal"})
 @Mod(AdvancedPingDisplay.MODID)
+@Mod.EventBusSubscriber(
+        modid = "adp",
+        bus = Mod.EventBusSubscriber.Bus.MOD
+)
 public class AdvancedPingDisplay {
     public static final String MODID = "adp";
     public static final Logger LOGGER = LogManager.getLogger("AdvancedPingDisplay");
@@ -51,6 +57,12 @@ public class AdvancedPingDisplay {
     }
     private void setup(final FMLCommonSetupEvent event) {
         event.enqueueWork(ModProtocol::init);
+    }
+    @SubscribeEvent
+    public static void onConfigReload(ModConfigEvent.Reloading event) {
+        if (event.getConfig().getSpec() == APDConfig.SPEC) {
+            System.out.println("SERVER LOG: Config reload detected! Refreshing memory...");
+        }
     }
 
     public static class ModDetector {

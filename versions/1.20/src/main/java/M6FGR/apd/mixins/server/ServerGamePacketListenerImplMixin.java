@@ -22,62 +22,55 @@ public abstract class ServerGamePacketListenerImplMixin {
     long ap$lastPingTriggerTime = 0L;
 
     @Unique
-    int apd$lastSentPing = -1;
+    int apd$lastSentPing;
 
     @Inject(method = "tick", at = @At("TAIL"))
     private void ap$onTick(CallbackInfo ci) {
         ServerGamePacketListenerImpl listener = (ServerGamePacketListenerImpl) (Object) this;
-        ServerGamePacketListenerImplAccessor accessor = (ServerGamePacketListenerImplAccessor) this;
 
         if (listener.connection == null || !listener.connection.isConnected()) return;
         if (listener.player == null || listener.player.tickCount < 40) return;
 
-        long idleTime = Util.getMillis() - listener.player.getLastActionTime();
-        if (idleTime > 3 * 60 * 1000L && listener.player.moveDist == 0) {
-            listener.disconnect(Component.literal("Kicked for being idle for too long"));
-            return;
-        }
-
         long millis = Util.getMillis();
-        double frequencySeconds = APDConfig.SPEC.isLoaded() ? APDConfig.PING_FREQUENCY.get() : 1.0;
-        long frequencyMs = (long)(frequencySeconds * 1000L);
+        double freq = APDConfig.PING_FREQUENCY.get();
+        long frequencyMs = (long)(freq * 1000L);
 
         if (millis - ap$lastPingTriggerTime >= frequencyMs) {
-            if (!accessor.isKeepAlivePending()) {
-                accessor.setKeepAliveTime(millis - 15001L);
-                this.ap$lastPingTriggerTime = millis;
+            PingType currentType = APDConfig.PING_TYPE.get();
+            int currentPingValue;
+
+            if (currentType == PingType.NORMAL) {
+                currentPingValue = listener.player.latency;
             } else {
-                // Check if pending for more than 5 seconds to prevent deadlock
-                if (millis - accessor.getKeepAliveTime() > 5000L) {
-                    accessor.setKeepAlivePending(false);
-                }
+                float sent = listener.connection.getAverageSentPackets();
+                float received = listener.connection.getAverageReceivedPackets();
+                currentPingValue = (sent > 0 || received > 0) ? (int)(sent + received) : -1;
             }
+
+            if (currentPingValue != apd$lastSentPing) {
+                broadcastPing(listener, currentPingValue);
+                this.apd$lastSentPing = currentPingValue;
+            }
+
+            this.ap$lastPingTriggerTime = millis;
+
         }
+    }
+
+    @Unique
+    private void broadcastPing(ServerGamePacketListenerImpl listener, int ping) {
+        listener.player.latency = ping;
+
+        ClientboundPlayerInfoUpdatePacket update = new ClientboundPlayerInfoUpdatePacket(
+                EnumSet.of(ClientboundPlayerInfoUpdatePacket.Action.UPDATE_LATENCY),
+                List.of(listener.player)
+        );
+
+        listener.player.server.getPlayerList().broadcastAll(update);
+        this.apd$lastSentPing = ping;
     }
 
     @Inject(method = "handleKeepAlive", at = @At("TAIL"))
     private void ap$onHandleKeepAlive(ServerboundKeepAlivePacket packet, CallbackInfo ci) {
-        ServerGamePacketListenerImpl listener = (ServerGamePacketListenerImpl) (Object) this;
-        if (listener.player == null || listener.player.server == null) return;
-
-        int currentPing;
-        PingType type = APDConfig.SPEC.isLoaded() ? APDConfig.PING_TYPE.get() : PingType.NORMAL;
-
-        if (type == PingType.NORMAL) {
-            currentPing = listener.player.latency;
-        } else {
-            currentPing = (int) (listener.connection.getAverageSentPackets() + listener.connection.getAverageReceivedPackets());
-            listener.player.latency = currentPing;
-        }
-
-        if (currentPing != apd$lastSentPing) {
-            ClientboundPlayerInfoUpdatePacket update = new ClientboundPlayerInfoUpdatePacket(
-                    EnumSet.of(ClientboundPlayerInfoUpdatePacket.Action.UPDATE_LATENCY),
-                    List.of(listener.player)
-            );
-
-            listener.player.server.getPlayerList().broadcastAll(update);
-            this.apd$lastSentPing = currentPing;
-        }
     }
 }

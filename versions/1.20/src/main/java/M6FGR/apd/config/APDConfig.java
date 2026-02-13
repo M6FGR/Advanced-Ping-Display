@@ -29,8 +29,4 @@ public class APDConfig {
 
     }
 
-    public static void reloadConfig() {
-        APDConfig.SPEC.acceptConfig((CommentedConfig) ConfigTracker.INSTANCE.configSets().get(ModConfig.Type.COMMON));
-    }
-
 }

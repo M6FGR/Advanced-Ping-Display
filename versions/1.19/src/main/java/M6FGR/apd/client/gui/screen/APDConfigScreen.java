@@ -19,7 +19,6 @@ import net.minecraftforge.api.distmarker.OnlyIn;
 import net.minecraftforge.fml.config.ConfigTracker;
 
 import java.util.List;
-import java.util.Optional;
 
 @OnlyIn(Dist.CLIENT)
 public class APDConfigScreen extends Screen {
@@ -28,6 +27,8 @@ public class APDConfigScreen extends Screen {
 
     private OptionInstance<PingType> pingTypeOption;
     private OptionInstance<Double> pingFreq;
+    private AbstractWidget pingTypeWid;
+    private AbstractWidget pingFreqWid;
 
     public APDConfigScreen(Screen lastScreen) {
         super(Component.literal("Advanced Pinger Settings"));
@@ -64,10 +65,9 @@ public class APDConfigScreen extends Screen {
                 ),
                 AdvancedPingDisplay.HAS_INCOMPATIBLE_MOD ? PingType.PACKET : APDConfig.PING_TYPE.get(),
                 (value) -> {
-                    if (!AdvancedPingDisplay.HAS_INCOMPATIBLE_MOD) {
-                        APDConfig.PING_TYPE.set(value);
-                        APDConfig.SPEC.save();
-                    }
+                    APDConfig.PING_TYPE.set(value);
+                    APDConfig.SPEC.save();
+
                 }
         );
 
@@ -80,15 +80,15 @@ public class APDConfigScreen extends Screen {
         boolean modOnServer = ServerAccessor.isModOnServer();
         boolean inWorld = Minecraft.getInstance().level != null;
 
-        AbstractWidget typeBtn = this.list.findOption(this.pingTypeOption);
-        AbstractWidget freqBtn = this.list.findOption(this.pingFreq);
+        this.pingTypeWid = this.list.findOption(this.pingTypeOption);
+        this.pingFreqWid = this.list.findOption(this.pingFreq);
 
-        if (typeBtn != null && (isSingleplayer || isIncompatible)) {
-            typeBtn.active = false;
+        if (pingTypeWid != null && (isSingleplayer || isIncompatible)) {
+            pingTypeWid.active = false;
         }
 
-        if (freqBtn != null && (isSingleplayer || !modOnServer || !inWorld)) {
-            freqBtn.active = false;
+        if (pingFreqWid != null && (isSingleplayer || !modOnServer || !inWorld)) {
+            pingFreqWid.active = false;
         }
 
         this.addRenderableWidget(new Button(this.width / 2 - 100, this.height - 27, 200, 20, CommonComponents.GUI_DONE, (button) -> {
@@ -111,21 +111,45 @@ public class APDConfigScreen extends Screen {
         drawCenteredString(poseStack, this.font, this.title, this.width / 2, 8, 0xFFFFFF);
         super.render(poseStack, mouseX, mouseY, partialTick);
 
-        Optional<AbstractWidget> hovered = this.list.getMouseOver(mouseX, mouseY);
-        if (hovered.isPresent()) {
-            AbstractWidget widget = hovered.get();
-            String modList = "";
-            if (!AdvancedPingDisplay.incompatibleMods.isEmpty()) {
-                modList = String.join(", ", AdvancedPingDisplay.incompatibleMods.stream().iterator().next());
-            }
-            if (widget == this.list.findOption(this.pingTypeOption)) {
+        if (mouseY >= 32 && mouseY <= this.height - 32) {
+            int centerX = this.width / 2;
+            int listTop = 32;
+            int rowHeight = 25;
+            double scrollAmount = this.list.getScrollAmount();
+
+            int hoveredIndex = (int) ((mouseY - listTop + scrollAmount) / rowHeight);
+
+            if (hoveredIndex >= 0 && hoveredIndex < this.list.children().size()) {
+                net.minecraft.network.chat.MutableComponent tooltip = null;
                 boolean isSingleplayer = this.minecraft.getSingleplayerServer() != null || this.minecraft.hasSingleplayerServer();
-                String text = isSingleplayer ? "§cDisabled in Singleplayer" : (AdvancedPingDisplay.HAS_INCOMPATIBLE_MOD ? "§cIncompatible Mods: " + modList : "Normal: Standard ping.\nPacket: Local packet count.");
-                this.renderTooltip(poseStack, this.font.split(Component.literal(text), 200), mouseX, mouseY);
-            } else if (widget == this.list.findOption(this.pingFreq)) {
-                boolean isSingleplayer = this.minecraft.getSingleplayerServer() != null || this.minecraft.hasSingleplayerServer();
-                String text = isSingleplayer ? "§cDisabled in Singleplayer" : (!ServerAccessor.isModOnServer() ? "§cRequires mod on server" : "Adjust update rate.");
-                this.renderTooltip(poseStack, this.font.split(Component.literal(text), 200), mouseX, mouseY);
+
+                boolean isLeftColumn = mouseX >= centerX - 160 && mouseX <= centerX - 10;
+                boolean isRightColumn = mouseX >= centerX + 10 && mouseX <= centerX + 160;
+
+                if (hoveredIndex == 0) {
+                    if (isLeftColumn) {
+                        if (isSingleplayer) {
+                            tooltip = Component.literal("Disabled in Singleplayer!").withStyle(net.minecraft.ChatFormatting.RED);
+                        } else if (!ServerAccessor.isModOnServer()) {
+                            tooltip = Component.literal("Requires mod on the server to change frequency!").withStyle(net.minecraft.ChatFormatting.RED);
+                        } else {
+                            tooltip = Component.literal("Adjust ping update rate in seconds.");
+                        }
+                    } else if (isRightColumn) { // Ping Type (Second in addSmall)
+                        if (isSingleplayer) {
+                            tooltip = Component.literal("Disabled in Singleplayer!").withStyle(net.minecraft.ChatFormatting.RED);
+                        } else if (AdvancedPingDisplay.HAS_INCOMPATIBLE_MOD) {
+                            String mods = String.join(", ", AdvancedPingDisplay.incompatibleMods);
+                            tooltip = Component.literal("Incompatible Mods!: " + mods).withStyle(net.minecraft.ChatFormatting.RED);
+                        } else {
+                            tooltip = Component.literal("Normal: Standard ping.\nPacket: Local packet count.");
+                        }
+                    }
+                }
+
+                if (tooltip != null) {
+                    this.renderTooltip(poseStack, this.font.split(tooltip, 200), mouseX, mouseY);
+                }
             }
         }
     }

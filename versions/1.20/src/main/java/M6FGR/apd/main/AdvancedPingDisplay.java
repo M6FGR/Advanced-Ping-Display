@@ -1,6 +1,7 @@
 package M6FGR.apd.main;
 
 import M6FGR.apd.network.protocol.ModProtocol;
+import M6FGR.apd.network.protocol.PacketProtocol;
 import M6FGR.apd.registery.ClientRegistries;
 import M6FGR.apd.config.APDConfig;
 import M6FGR.apd.sever.commands.PingCommand;
@@ -57,6 +58,7 @@ public class AdvancedPingDisplay {
     }
     private void setup(final FMLCommonSetupEvent event) {
         event.enqueueWork(ModProtocol::init);
+        event.enqueueWork(PacketProtocol::init);
     }
     @SubscribeEvent
     public static void onConfigReload(ModConfigEvent.Reloading event) {

@@ -22,8 +22,8 @@ public abstract class ServerGamePacketListenerImplMixin {
     @Unique
     int apd$lastSentPing;
 
-    @Inject(method = "tick", at = @At("TAIL"))
-    private void ap$onTick(CallbackInfo ci) {
+    @Inject(method = "tick", at = @At("TAIL"), remap = true)
+    private void apd$onTick(CallbackInfo ci) {
         ServerGamePacketListenerImpl listener = (ServerGamePacketListenerImpl) (Object) this;
         ServerGamePacketListenerImplAccessor accessor = (ServerGamePacketListenerImplAccessor) this;
 

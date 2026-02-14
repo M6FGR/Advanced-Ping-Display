@@ -11,7 +11,7 @@ pluginManagement {
 // COMMENT THESE OUT for now to fix the 1.19 environment
 // include ':1.18'
 include ':1.19'
- include ':1.20'
+include ':1.20'
 
 project(':1.19').projectDir = file('versions/1.19')
 project(':1.20').projectDir = file('versions/1.20')

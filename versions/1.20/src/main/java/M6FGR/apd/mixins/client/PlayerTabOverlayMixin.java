@@ -71,7 +71,7 @@ public class PlayerTabOverlayMixin {
         }
 
         int vanillaPing = playerInfo.getLatency();
-        return Math.max(vanillaPing, 0);
+        return Math.max(vanillaPing, -1);
     }
 
     @Unique

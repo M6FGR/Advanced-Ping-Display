@@ -3,6 +3,8 @@ package M6FGR.apd.client.gui.screen;
 import M6FGR.apd.api.enums.PingType;
 import M6FGR.apd.config.APDConfig;
 import M6FGR.apd.main.AdvancedPingDisplay;
+import M6FGR.apd.network.packet.SPConfigSync;
+import M6FGR.apd.network.protocol.PacketProtocol;
 import M6FGR.apd.network.server.DedicatedServerDetector;
 import com.electronwill.nightconfig.core.file.CommentedFileConfig;
 import com.mojang.serialization.Codec;
@@ -48,16 +50,18 @@ public class APDConfigScreen extends Screen {
                         Codec.INT.xmap(i -> PingType.values()[i], PingType::ordinal)
                 ),
                 APDConfig.PING_TYPE.get(),
-                (value) -> {}
+                (value) -> {
+                }
         );
 
         this.pingFreq = new OptionInstance<>(
                 "Ping Frequency",
                 OptionInstance.noTooltip(),
-                (label, value) -> Component.literal("Ping Frequency: " +value + "s"),
+                (label, value) -> Component.literal("Ping Frequency: " + value + "s"),
                 new OptionInstance.IntRange(0, 15),
                 APDConfig.PING_FREQUENCY.get().intValue(),
-                (value) -> {}
+                (value) -> {
+                }
         );
 
         this.list = new OptionsList(this.minecraft, this.width, this.height, 32, this.height - 32, 25);
@@ -74,8 +78,17 @@ public class APDConfigScreen extends Screen {
             typeBtn.setTooltip(Tooltip.create(Component.literal(isSingleplayer ? "§Cannot change in Singleplayer" : "§cIncompatible Mods: " + modList)));
         }
         this.addRenderableWidget(Button.builder(CommonComponents.GUI_DONE, (button) -> {
-            this.onClose();
+            PingType selectedType = this.pingTypeOption.get();
+            double freq = this.pingFreq.get().doubleValue();
+
+            APDConfig.PING_TYPE.set(selectedType);
+            APDConfig.PING_FREQUENCY.set(freq);
             APDConfig.SPEC.save();
+
+            if (this.minecraft.getConnection() != null) {
+                PacketProtocol.INSTANCE.sendToServer(new SPConfigSync(freq, selectedType.ordinal()));
+            }
+
             this.minecraft.setScreen(this.lastScreen);
         }).bounds(this.width / 2 - 100, this.height - 27, 200, 20).build());
     }
@@ -92,16 +105,16 @@ public class APDConfigScreen extends Screen {
             PingType type = this.pingTypeOption.get();
             double freq = this.pingFreq.get().doubleValue();
 
-            System.out.println("DEBUG: Attempting to save... Type: " + type + " Freq: " + freq);
+            AdvancedPingDisplay.LOGGER.debug("Attempting to save... Type: " + type + " Freq: " + freq);
 
             APDConfig.PING_TYPE.set(type);
             APDConfig.PING_FREQUENCY.set(freq);
 
             if (APDConfig.SPEC.isLoaded()) {
                 APDConfig.SPEC.save();
-                System.out.println("DEBUG: File saved successfully.");
+                AdvancedPingDisplay.LOGGER.debug("DEBUG: File saved successfully.");
             } else {
-                System.out.println("DEBUG: Could not save - Config is NOT loaded (Server Sync active?)");
+                AdvancedPingDisplay.LOGGER.debug("DEBUG: Could not save - Config is NOT loaded (Server Sync active?)");
             }
         }
     }

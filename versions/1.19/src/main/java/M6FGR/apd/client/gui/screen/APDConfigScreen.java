@@ -3,6 +3,8 @@ package M6FGR.apd.client.gui.screen;
 import M6FGR.apd.api.enums.PingType;
 import M6FGR.apd.config.APDConfig;
 import M6FGR.apd.main.AdvancedPingDisplay;
+import M6FGR.apd.network.packet.SPConfigSync;
+import M6FGR.apd.network.protocol.PacketProtocol;
 import M6FGR.apd.network.server.ServerAccessor;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.serialization.Codec;
@@ -92,9 +94,16 @@ public class APDConfigScreen extends Screen {
         }
 
         this.addRenderableWidget(new Button(this.width / 2 - 100, this.height - 27, 200, 20, CommonComponents.GUI_DONE, (button) -> {
-            this.minecraft.setScreen(this.lastScreen);
+            double freq = APDConfig.PING_FREQUENCY.get();
+            int type = APDConfig.PING_TYPE.get().ordinal();
+
+            if (this.minecraft.getConnection() != null) {
+                PacketProtocol.INSTANCE.sendToServer(new SPConfigSync(freq, type));
+            }
+
             APDConfig.save();
-            this.onClose();
+
+            this.minecraft.setScreen(this.lastScreen);
         }));
     }
 

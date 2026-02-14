@@ -8,14 +8,11 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 @Mixin(ServerPlayer.class)
-public abstract class ServerPlayerMixin {
-
-    @Shadow
-    public int latency;
-
+public class ServerPlayerMixin {
+    // fixed issue latency was not found as a shadow field
     @Inject(method = "<init>", at = @At("TAIL"))
     private void ap$initLatency(CallbackInfo ci) {
-        this.latency = -1;
+        ServerPlayer player = (ServerPlayer) (Object) this;
+        player.latency = -1;
     }
-
 }

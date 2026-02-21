@@ -7,13 +7,17 @@ pluginManagement {
         }
     }
 }
-
-// COMMENT THESE OUT for now to fix the 1.19 environment
-// include ':1.18'
+// forge
+include ':1.18'
 include ':1.19'
 include ':1.20'
+// neoforge
+include ':1.21'
 
-project(':1.19').projectDir = file('versions/1.19')
-project(':1.20').projectDir = file('versions/1.20')
+project(':1.18').projectDir = file('versions/forge/1.18')
+project(':1.19').projectDir = file('versions/forge/1.19')
+project(':1.20').projectDir = file('versions/forge/1.20')
+
+project(':1.21').projectDir = file('versions/neoforge/1.21')
 
 rootProject.name = "Advanced Ping Display"

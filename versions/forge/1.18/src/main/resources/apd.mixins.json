@@ -1,0 +1,21 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "M6FGR.apd.mixins",
+  "compatibilityLevel": "JAVA_16",
+  "refmap": "apd.refmap.json",
+  "mixins": [
+    "server.ServerGamePacketListenerImplAccessor",
+    "server.ServerGamePacketListenerImplMixin",
+    "server.ServerPlayerMixin"
+  ],
+  "client": [
+    "client.PlayerTabOverlayMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  },
+  "overwrites": {
+    "requireAnnotations": true
+  }
+}
